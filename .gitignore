@@ -1,3 +1,11 @@
+# Custom *************
+[Bb]in/
+[Bb]in-int/
+**.sln
+**.vcxproj
+**.vcxproj.filters
+**.vcxproj.user 
+
 ## OSX artifacts
 .DS_Store
 
