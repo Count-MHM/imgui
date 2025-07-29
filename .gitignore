@@ -4,7 +4,8 @@
 **.sln
 **.vcxproj
 **.vcxproj.filters
-**.vcxproj.user 
+**.vcxproj.user
+user_config.h
 
 ## OSX artifacts
 .DS_Store
