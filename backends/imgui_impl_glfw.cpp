@@ -32,6 +32,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2025-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2025-07-08: Made ImGui_ImplGlfw_GetContentScaleForWindow(), ImGui_ImplGlfw_GetContentScaleForMonitor() helpers return 1.0f on Emscripten and Android platforms, matching macOS logic. (#8742, #8733)
 //  2025-06-18: Added support for multiple Dear ImGui contexts. (#8676, #8239, #8069)
 //  2025-06-11: Added ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window) and ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor) helper to facilitate making DPI-aware apps.
 //  2025-05-15: [Docking] Add Platform_GetWindowFramebufferScale() handler, to allow varying Retina display density on multiple monitors.
@@ -400,7 +401,6 @@ static bool ImGui_ImplGlfw_ShouldChainCallback(ImGui_ImplGlfw_Data* bd, GLFWwind
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
     ImGui_ImplGlfw_Data* bd = ImGui_ImplGlfw_GetBackendData(window);
-
     if (bd->PrevUserCallbackMousebutton != nullptr && ImGui_ImplGlfw_ShouldChainCallback(bd, window))
         bd->PrevUserCallbackMousebutton(window, button, action, mods);
 
@@ -1004,7 +1004,7 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 // - Some accessibility applications are declaring virtual monitors with a DPI of 0.0f, see #7902. We preserve this value for caller to handle.
 float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 {
-#if GLFW_HAS_PER_MONITOR_DPI && !defined(__APPLE__)
+#if GLFW_HAS_PER_MONITOR_DPI && !(defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__))
     float x_scale, y_scale;
     glfwGetWindowContentScale(window, &x_scale, &y_scale);
     return x_scale;
@@ -1016,7 +1016,7 @@ float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window)
 
 float ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor)
 {
-#if GLFW_HAS_PER_MONITOR_DPI && !defined(__APPLE__)
+#if GLFW_HAS_PER_MONITOR_DPI && !(defined(__APPLE__) || defined(__EMSCRIPTEN__) || defined(__ANDROID__))
     float x_scale, y_scale;
     glfwGetMonitorContentScale(monitor, &x_scale, &y_scale);
     return x_scale;
@@ -1219,6 +1219,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformHandle = (void*)vd->Window;
 #ifdef _WIN32
     viewport->PlatformHandleRaw = glfwGetWin32Window(vd->Window);
+    ::SetPropA((HWND)viewport->PlatformHandleRaw, "IMGUI_BACKEND_DATA", bd);
 #elif defined(__APPLE__)
     viewport->PlatformHandleRaw = (void*)glfwGetCocoaWindow(vd->Window);
 #endif
@@ -1284,12 +1285,10 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
         ::SetWindowLong(hwnd, GWL_EXSTYLE, ex_style);
     }
 
-    // GLFW hack: install hook for WM_NCHITTEST message handler
-#if !GLFW_HAS_MOUSE_PASSTHROUGH && GLFW_HAS_WINDOW_HOVERED && defined(_WIN32)
+    // GLFW hack: install WndProc for mouse source event and WM_NCHITTEST message handler.
     ::SetPropA(hwnd, "IMGUI_VIEWPORT", viewport);
     vd->PrevWndProc = (WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC);
     ::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplGlfw_WndProc);
-#endif
 
 #if !GLFW_HAS_FOCUS_ON_SHOW
     // GLFW hack: GLFW 3.2 has a bug where glfwShowWindow() also activates/focus the window.
