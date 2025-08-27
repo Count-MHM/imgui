@@ -2,9 +2,8 @@
 # 2025/03/03
 # 2025/03/22
 # 2025/07/29
+# 2025/08/27
 add_library(imgui STATIC)
-
-file(WRITE user_config.h "#pragma once\n")
 
 option(IMGUI_ENABLE_CPP_STDLIB_ADDON "Enable wrappers for STL" ON)
 option(IMGUI_ENABLE_FREETYPE "Allow ImGui to use FreeType" OFF)
@@ -50,7 +49,6 @@ if (IMGUI_ENABLE_FREETYPE)
 	else()
 		message(FATAL_ERROR "Cannot find freetype")
 	endif()
-	file(APPEND user_config.h "#define IMGUI_ENABLE_FREETYPE\n")
 
 	if(IMGUI_ENABLE_FREETYPE_PLUTOSVG)
 		if (TARGET plutosvg::plutosvg)
@@ -58,11 +56,16 @@ if (IMGUI_ENABLE_FREETYPE)
 		else()
 			message(FATAL_ERROR "Cannot find plutosvg")
 		endif()
-		file(APPEND user_config.h "#define IMGUI_ENABLE_FREETYPE_PLUTOSVG\n")
 	endif()
 endif()
 
-target_include_directories(imgui PUBLIC 
+configure_file("cmake/user_config.h.in" "src/user_config.h"
+	@ONLY
+	NEWLINE_STYLE CRLF
+	)
+target_include_directories(imgui PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+target_include_directories(imgui PUBLIC
 	${IMGUI_INCLUDES}
 )
 target_sources(imgui PRIVATE

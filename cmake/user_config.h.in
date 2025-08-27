@@ -1,0 +1,7 @@
+/* Count_MHM
+ * 2025/08/27
+ */
+#pragma once
+
+#cmakedefine IMGUI_ENABLE_FREETYPE
+#cmakedefine IMGUI_ENABLE_FREETYPE_PLUTOSVG
